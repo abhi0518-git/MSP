@@ -44,6 +44,16 @@ app.get("/api/catalog/products", async (_, res) => {
   }
 });
 
+// Compatibility route for proxies that forward stripped path (/products).
+app.get("/products", async (_, res) => {
+  try {
+    const result = await pool.query("SELECT id, name, price FROM products ORDER BY id");
+    res.json(result.rows);
+  } catch (error) {
+    res.status(500).json({ error: "failed to fetch products" });
+  }
+});
+
 initSchema()
   .then(() => {
     app.listen(port, () => {

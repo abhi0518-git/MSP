@@ -39,7 +39,52 @@ app.get("/api/orders", async (_, res) => {
   }
 });
 
+// Compatibility route for proxies that forward stripped path (/).
+app.get("/", async (_, res) => {
+  try {
+    const result = await pool.query(
+      "SELECT id, product_id, quantity, total_amount, created_at FROM orders ORDER BY id DESC"
+    );
+    res.json(result.rows);
+  } catch (error) {
+    res.status(500).json({ error: "failed to fetch orders" });
+  }
+});
+
 app.post("/api/orders", async (req, res) => {
+  const { productId, quantity } = req.body || {};
+
+  if (!productId || !quantity || quantity < 1) {
+    return res.status(400).json({ error: "productId and quantity are required" });
+  }
+
+  try {
+    const productResponse = await axios.get(`${catalogServiceUrl}/api/catalog/products`);
+    const product = productResponse.data.find((p) => p.id === Number(productId));
+
+    if (!product) {
+      return res.status(404).json({ error: "product not found" });
+    }
+
+    const totalAmount = Number(product.price) * Number(quantity);
+
+    const result = await pool.query(
+      `
+      INSERT INTO orders (product_id, quantity, total_amount)
+      VALUES ($1, $2, $3)
+      RETURNING id, product_id, quantity, total_amount, created_at
+      `,
+      [Number(productId), Number(quantity), totalAmount]
+    );
+
+    return res.status(201).json(result.rows[0]);
+  } catch (error) {
+    return res.status(500).json({ error: "failed to create order" });
+  }
+});
+
+// Compatibility route for proxies that forward stripped path (/).
+app.post("/", async (req, res) => {
   const { productId, quantity } = req.body || {};
 
   if (!productId || !quantity || quantity < 1) {
