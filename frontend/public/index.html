@@ -87,7 +87,11 @@
   <script src="/config.js"></script>
   <script>
     const configuredApiBaseUrl = (window.__APP_CONFIG__ && window.__APP_CONFIG__.API_BASE_URL) || "";
-    const API_BASE_URL = configuredApiBaseUrl || `${window.location.protocol}//${window.location.hostname}:8080`;
+    const isLocalUiHost = ["localhost", "127.0.0.1"].includes(window.location.hostname);
+    const configuredUsesLocalhost = /localhost|127\.0\.0\.1/i.test(configuredApiBaseUrl);
+    const API_BASE_URL = (!isLocalUiHost && configuredUsesLocalhost)
+      ? `${window.location.protocol}//${window.location.hostname}:8080`
+      : (configuredApiBaseUrl || `${window.location.protocol}//${window.location.hostname}:8080`);
     const productsEl = document.getElementById("products");
     const ordersEl = document.getElementById("orders");
     const productSelect = document.getElementById("productSelect");
