@@ -73,6 +73,7 @@ services:
     environment:
       NODE_ENV: development
       PORT: 3000
+      GATEWAY_URL: http://gateway:8080
       API_BASE_URL: ""
     depends_on:
       - gateway
