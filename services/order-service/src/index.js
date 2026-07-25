@@ -16,23 +16,32 @@ async function initSchema() {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS orders (
       id SERIAL PRIMARY KEY,
+      customer_id VARCHAR(120) NOT NULL DEFAULT 'guest',
       product_id INT NOT NULL,
       quantity INT NOT NULL,
       total_amount NUMERIC(10,2) NOT NULL,
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
   `);
+
+  await pool.query("ALTER TABLE orders ADD COLUMN IF NOT EXISTS customer_id VARCHAR(120) NOT NULL DEFAULT 'guest';");
 }
 
 app.get("/health", (_, res) => {
   res.status(200).json({ status: "ok", service: "order-service" });
 });
 
-app.get("/api/orders", async (_, res) => {
+app.get("/api/orders", async (req, res) => {
   try {
-    const result = await pool.query(
-      "SELECT id, product_id, quantity, total_amount, created_at FROM orders ORDER BY id DESC"
-    );
+    const customerId = req.query.customerId;
+    const result = customerId
+      ? await pool.query(
+          "SELECT id, customer_id, product_id, quantity, total_amount, created_at FROM orders WHERE customer_id = $1 ORDER BY id DESC",
+          [customerId]
+        )
+      : await pool.query(
+          "SELECT id, customer_id, product_id, quantity, total_amount, created_at FROM orders ORDER BY id DESC"
+        );
     res.json(result.rows);
   } catch (error) {
     res.status(500).json({ error: "failed to fetch orders" });
@@ -52,7 +61,7 @@ app.get("/", async (_, res) => {
 });
 
 app.post("/api/orders", async (req, res) => {
-  const { productId, quantity } = req.body || {};
+  const { productId, quantity, customerId } = req.body || {};
 
   if (!productId || !quantity || quantity < 1) {
     return res.status(400).json({ error: "productId and quantity are required" });
@@ -70,11 +79,11 @@ app.post("/api/orders", async (req, res) => {
 
     const result = await pool.query(
       `
-      INSERT INTO orders (product_id, quantity, total_amount)
-      VALUES ($1, $2, $3)
-      RETURNING id, product_id, quantity, total_amount, created_at
+      INSERT INTO orders (customer_id, product_id, quantity, total_amount)
+      VALUES ($1, $2, $3, $4)
+      RETURNING id, customer_id, product_id, quantity, total_amount, created_at
       `,
-      [Number(productId), Number(quantity), totalAmount]
+      [customerId || "guest", Number(productId), Number(quantity), totalAmount]
     );
 
     return res.status(201).json(result.rows[0]);
@@ -85,7 +94,7 @@ app.post("/api/orders", async (req, res) => {
 
 // Compatibility route for proxies that forward stripped path (/).
 app.post("/", async (req, res) => {
-  const { productId, quantity } = req.body || {};
+  const { productId, quantity, customerId } = req.body || {};
 
   if (!productId || !quantity || quantity < 1) {
     return res.status(400).json({ error: "productId and quantity are required" });
@@ -103,11 +112,11 @@ app.post("/", async (req, res) => {
 
     const result = await pool.query(
       `
-      INSERT INTO orders (product_id, quantity, total_amount)
-      VALUES ($1, $2, $3)
-      RETURNING id, product_id, quantity, total_amount, created_at
+      INSERT INTO orders (customer_id, product_id, quantity, total_amount)
+      VALUES ($1, $2, $3, $4)
+      RETURNING id, customer_id, product_id, quantity, total_amount, created_at
       `,
-      [Number(productId), Number(quantity), totalAmount]
+      [customerId || "guest", Number(productId), Number(quantity), totalAmount]
     );
 
     return res.status(201).json(result.rows[0]);

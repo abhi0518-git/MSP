@@ -66,6 +66,8 @@
 
       <section class="card">
         <h2>Create Order</h2>
+        <label>Customer</label>
+        <input id="customerId" type="text" value="demo-user" />
         <label>Product</label>
         <select id="productSelect"></select>
         <label>Quantity</label>
@@ -90,10 +92,11 @@
     const ordersEl = document.getElementById("orders");
     const productSelect = document.getElementById("productSelect");
     const qtyInput = document.getElementById("qty");
+    const customerIdInput = document.getElementById("customerId");
     const orderResult = document.getElementById("orderResult");
 
     async function fetchProducts() {
-      const res = await fetch(`${API_BASE_URL}/api/catalog/products`);
+      const res = await fetch(`${API_BASE_URL}/api/products`);
       const data = await res.json();
       productsEl.innerHTML = "";
       productSelect.innerHTML = "";
@@ -112,7 +115,8 @@
     async function createOrder() {
       const payload = {
         productId: Number(productSelect.value),
-        quantity: Number(qtyInput.value)
+        quantity: Number(qtyInput.value),
+        customerId: customerIdInput.value || "guest"
       };
 
       const res = await fetch(`${API_BASE_URL}/api/orders`, {
@@ -130,12 +134,13 @@
     }
 
     async function fetchOrders() {
-      const res = await fetch(`${API_BASE_URL}/api/orders`);
+      const customerId = customerIdInput.value || "guest";
+      const res = await fetch(`${API_BASE_URL}/api/orders?customerId=${encodeURIComponent(customerId)}`);
       const data = await res.json();
       ordersEl.innerHTML = "";
       data.forEach((o) => {
         const li = document.createElement("li");
-        li.textContent = `#${o.id} -> product ${o.product_id}, qty ${o.quantity}, total $${Number(o.total_amount).toFixed(2)}`;
+        li.textContent = `#${o.id} -> customer ${o.customer_id}, product ${o.product_id}, qty ${o.quantity}, total $${Number(o.total_amount).toFixed(2)}`;
         ordersEl.appendChild(li);
       });
     }
