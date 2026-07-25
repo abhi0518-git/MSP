@@ -6,8 +6,8 @@ const { createProxyMiddleware } = require("http-proxy-middleware");
 
 const app = express();
 const port = process.env.PORT || 8080;
-const catalogServiceUrl = process.env.CATALOG_SERVICE_URL || "http://localhost:4001";
-const orderServiceUrl = process.env.ORDER_SERVICE_URL || "http://localhost:4002";
+const catalogServiceUrl = process.env.CATALOG_SERVICE_URL || "http://catalog-service:4001";
+const orderServiceUrl = process.env.ORDER_SERVICE_URL || "http://order-service:4002";
 
 app.use(helmet());
 app.use(cors());
@@ -18,18 +18,20 @@ app.get("/health", (_, res) => {
 });
 
 app.use(
+  "/api/catalog",
   createProxyMiddleware({
     target: catalogServiceUrl,
     changeOrigin: true,
-    pathFilter: "/api/catalog"
+    pathRewrite: (path) => `/api/catalog${path}`
   })
 );
 
 app.use(
+  "/api/orders",
   createProxyMiddleware({
     target: orderServiceUrl,
     changeOrigin: true,
-    pathFilter: "/api/orders"
+    pathRewrite: (path) => `/api/orders${path}`
   })
 );
 
