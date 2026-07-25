@@ -21,7 +21,8 @@ app.use(
   "/api/catalog",
   createProxyMiddleware({
     target: catalogServiceUrl,
-    changeOrigin: true
+    changeOrigin: true,
+    pathRewrite: (path) => `/api/catalog${path}`
   })
 );
 
@@ -29,7 +30,8 @@ app.use(
   "/api/orders",
   createProxyMiddleware({
     target: orderServiceUrl,
-    changeOrigin: true
+    changeOrigin: true,
+    pathRewrite: (path) => `/api/orders${path}`
   })
 );
 
