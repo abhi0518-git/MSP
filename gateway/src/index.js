@@ -18,20 +18,18 @@ app.get("/health", (_, res) => {
 });
 
 app.use(
-  "/api/catalog",
   createProxyMiddleware({
     target: catalogServiceUrl,
     changeOrigin: true,
-    pathRewrite: (path) => `/api/catalog${path}`
+    pathFilter: "/api/catalog"
   })
 );
 
 app.use(
-  "/api/orders",
   createProxyMiddleware({
     target: orderServiceUrl,
     changeOrigin: true,
-    pathRewrite: (path) => `/api/orders${path}`
+    pathFilter: "/api/orders"
   })
 );
 
