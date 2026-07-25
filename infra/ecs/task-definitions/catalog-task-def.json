@@ -1,0 +1,33 @@
+{
+  "family": "catalog-task",
+  "networkMode": "awsvpc",
+  "executionRoleArn": "__TASK_EXECUTION_ROLE_ARN__",
+  "taskRoleArn": "__TASK_ROLE_ARN__",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "256",
+  "memory": "512",
+  "containerDefinitions": [
+    {
+      "name": "catalog-service",
+      "image": "__AWS_ACCOUNT_ID__.dkr.ecr.__AWS_REGION__.amazonaws.com/catalog-service:latest",
+      "essential": true,
+      "portMappings": [{ "containerPort": 4001, "protocol": "tcp" }],
+      "environment": [
+        { "name": "PORT", "value": "4001" },
+        { "name": "DB_HOST", "value": "your-rds-endpoint" },
+        { "name": "DB_PORT", "value": "5432" },
+        { "name": "DB_NAME", "value": "appdb" },
+        { "name": "DB_USER", "value": "appuser" },
+        { "name": "DB_PASSWORD", "value": "apppassword" }
+      ],
+      "logConfiguration": {
+        "logDriver": "awslogs",
+        "options": {
+          "awslogs-group": "/ecs/catalog-service",
+          "awslogs-region": "__AWS_REGION__",
+          "awslogs-stream-prefix": "ecs"
+        }
+      }
+    }
+  ]
+}

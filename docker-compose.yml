@@ -1,0 +1,85 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: app-postgres
+    environment:
+      POSTGRES_DB: appdb
+      POSTGRES_USER: appuser
+      POSTGRES_PASSWORD: apppassword
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U appuser -d appdb"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  catalog-service:
+    build:
+      context: ./services/catalog-service
+    environment:
+      NODE_ENV: development
+      PORT: 4001
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: appuser
+      DB_PASSWORD: apppassword
+      DB_NAME: appdb
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "4001:4001"
+
+  order-service:
+    build:
+      context: ./services/order-service
+    environment:
+      NODE_ENV: development
+      PORT: 4002
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USER: appuser
+      DB_PASSWORD: apppassword
+      DB_NAME: appdb
+      CATALOG_SERVICE_URL: http://catalog-service:4001
+    depends_on:
+      postgres:
+        condition: service_healthy
+      catalog-service:
+        condition: service_started
+    ports:
+      - "4002:4002"
+
+  gateway:
+    build:
+      context: ./gateway
+    environment:
+      NODE_ENV: development
+      PORT: 8080
+      CATALOG_SERVICE_URL: http://catalog-service:4001
+      ORDER_SERVICE_URL: http://order-service:4002
+    depends_on:
+      - catalog-service
+      - order-service
+    ports:
+      - "8080:8080"
+
+  frontend:
+    build:
+      context: ./frontend
+    environment:
+      NODE_ENV: development
+      PORT: 3000
+      API_BASE_URL: http://localhost:8080
+    depends_on:
+      - gateway
+    ports:
+      - "3000:3000"
+
+volumes:
+  pg_data:

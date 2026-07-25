@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Three-Tier Microservices Demo</title>
+  <style>
+    :root {
+      --bg: #f5efe6;
+      --card: #fffaf2;
+      --ink: #1f1f1f;
+      --brand: #b33a3a;
+      --muted: #5d5d5d;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Tahoma, sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 20% 20%, #f2d4c2 0%, transparent 40%),
+        radial-gradient(circle at 80% 10%, #e7f2d4 0%, transparent 35%),
+        var(--bg);
+    }
+    .wrap { max-width: 960px; margin: 0 auto; padding: 32px 16px; }
+    h1 { margin-top: 0; letter-spacing: 0.4px; }
+    .grid { display: grid; gap: 16px; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+    .card {
+      background: var(--card);
+      border: 1px solid #e8dbc8;
+      border-radius: 14px;
+      padding: 16px;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.06);
+    }
+    button {
+      border: 0;
+      background: var(--brand);
+      color: white;
+      border-radius: 8px;
+      padding: 10px 14px;
+      cursor: pointer;
+    }
+    select, input {
+      width: 100%;
+      margin: 8px 0 12px;
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid #d5c4ad;
+      background: white;
+    }
+    .muted { color: var(--muted); font-size: 14px; }
+    ul { padding-left: 20px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Three-Tier Microservices Demo</h1>
+    <p class="muted">Frontend -> API Gateway -> Microservices -> PostgreSQL</p>
+
+    <div class="grid">
+      <section class="card">
+        <h2>Catalog</h2>
+        <button id="loadProducts">Load Products</button>
+        <ul id="products"></ul>
+      </section>
+
+      <section class="card">
+        <h2>Create Order</h2>
+        <label>Product</label>
+        <select id="productSelect"></select>
+        <label>Quantity</label>
+        <input id="qty" type="number" min="1" value="1" />
+        <button id="createOrder">Submit Order</button>
+        <p id="orderResult" class="muted"></p>
+      </section>
+
+      <section class="card">
+        <h2>Orders</h2>
+        <button id="loadOrders">Load Orders</button>
+        <ul id="orders"></ul>
+      </section>
+    </div>
+  </div>
+
+  <script src="/config.js"></script>
+  <script>
+    const API_BASE_URL = (window.__APP_CONFIG__ && window.__APP_CONFIG__.API_BASE_URL) || "";
+    const productsEl = document.getElementById("products");
+    const ordersEl = document.getElementById("orders");
+    const productSelect = document.getElementById("productSelect");
+    const qtyInput = document.getElementById("qty");
+    const orderResult = document.getElementById("orderResult");
+
+    async function fetchProducts() {
+      const res = await fetch(`${API_BASE_URL}/api/catalog/products`);
+      const data = await res.json();
+      productsEl.innerHTML = "";
+      productSelect.innerHTML = "";
+      data.forEach((p) => {
+        const li = document.createElement("li");
+        li.textContent = `${p.id}: ${p.name} - $${Number(p.price).toFixed(2)}`;
+        productsEl.appendChild(li);
+
+        const opt = document.createElement("option");
+        opt.value = p.id;
+        opt.textContent = `${p.name} ($${Number(p.price).toFixed(2)})`;
+        productSelect.appendChild(opt);
+      });
+    }
+
+    async function createOrder() {
+      const payload = {
+        productId: Number(productSelect.value),
+        quantity: Number(qtyInput.value)
+      };
+
+      const res = await fetch(`${API_BASE_URL}/api/orders`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        orderResult.textContent = `Error: ${data.error || "failed"}`;
+        return;
+      }
+      orderResult.textContent = `Order ${data.id} created. Total: $${Number(data.total_amount).toFixed(2)}`;
+    }
+
+    async function fetchOrders() {
+      const res = await fetch(`${API_BASE_URL}/api/orders`);
+      const data = await res.json();
+      ordersEl.innerHTML = "";
+      data.forEach((o) => {
+        const li = document.createElement("li");
+        li.textContent = `#${o.id} -> product ${o.product_id}, qty ${o.quantity}, total $${Number(o.total_amount).toFixed(2)}`;
+        ordersEl.appendChild(li);
+      });
+    }
+
+    document.getElementById("loadProducts").addEventListener("click", fetchProducts);
+    document.getElementById("createOrder").addEventListener("click", createOrder);
+    document.getElementById("loadOrders").addEventListener("click", fetchOrders);
+
+    fetchProducts().catch(console.error);
+  </script>
+</body>
+</html>
